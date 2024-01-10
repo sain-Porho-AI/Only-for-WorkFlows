@@ -33,3 +33,9 @@ jobs:
           fi
 
           curl -X POST -H "Content-Type: application/json" -d "{\"content\":\"$MESSAGE\"}" "${{ secrets.DISCORD_WEBHOOK_URL }}"
+          git symbolic-ref refs/remotes/origin/HEAD
+          git rev-parse --abbrev-ref HEAD
+          git rev-parse origin
+          git ls-remote --heads origin main
+          git diff -- name
+          ${{ toJSON(github) }}' | jq
