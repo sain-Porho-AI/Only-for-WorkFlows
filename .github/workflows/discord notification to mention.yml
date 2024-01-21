@@ -1,4 +1,4 @@
-name: Push and Pull Request Notification
+name: Push and Pull Request Notification to mention
 
 on:
   push:
