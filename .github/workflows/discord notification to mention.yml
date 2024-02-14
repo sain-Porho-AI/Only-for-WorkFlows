@@ -15,22 +15,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Notify on Discord
       - name: Notify on Discord
         run: |
+          # Check if the event is a push or pull request
           if [ "${{ github.event_name }}" = "push" ]; then
+            # Construct a message for push events
             MESSAGE="New push to main branch by ${GITHUB_ACTOR}"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Construct a message for pull request events
             MESSAGE="New pull request #${{ github.event.number }} by ${GITHUB_ACTOR}: ${{ github.event.pull_request.html_url }}"
             
             # Fetch assignees using GitHub REST API
             ASSIGNEE_LIST=$(curl -sH "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "${{ github.event.pull_request.url }}/assignees" | jq -r '.[].login')
             
+            # Check if there are assignees for the pull request
             if [ -n "$ASSIGNEE_LIST" ]; then
+              # Append assignees to the message
               MESSAGE="$MESSAGE\nAssignees: $ASSIGNEE_LIST"
             else
+              # If no assignees, indicate it in the message
               MESSAGE="$MESSAGE\nNo assignees."
             fi
           fi
 
+          # Send the message to Discord webhook
           curl -X POST -H "Content-Type: application/json" -d "{\"content\":\"$MESSAGE\"}" "${{ secrets.DISCORD_WEBHOOK_URL }}"
-        

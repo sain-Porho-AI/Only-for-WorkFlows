@@ -15,14 +15,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Notify on Discord
       - name: Notify on Discord
         run: |
+          # Check if the event is a push or pull request
           if [ "${{ github.event_name }}" = "push" ]; then
+            # Construct a message for push events
             MESSAGE="New push to main branch by ${GITHUB_ACTOR}"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Construct a message for pull request events, including a link to the pull request
             MESSAGE="New pull request #${{ github.event.number }} by ${GITHUB_ACTOR}: ${GITHUB_SERVER_URL}/${{ github.repository }}/pull/${{ github.event.number }}"
           fi
 
+          # Send the message to Discord webhook
           curl -X POST -H "Content-Type: application/json" -d "{\"content\":\"$MESSAGE\"}" "${{ secrets.DISCORD_WEBHOOK_URL }}"
+          
+        # Define environment variable for Discord webhook URL
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
