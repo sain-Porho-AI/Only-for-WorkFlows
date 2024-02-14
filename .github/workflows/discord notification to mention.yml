@@ -1,4 +1,4 @@
-name: Push and Pull Request Notification
+name: Push and Pull Request Notification to mention
 
 on:
   push:
@@ -41,3 +41,4 @@ jobs:
 
           # Send the message to Discord webhook
           curl -X POST -H "Content-Type: application/json" -d "{\"content\":\"$MESSAGE\"}" "${{ secrets.DISCORD_WEBHOOK_URL }}"
+        
