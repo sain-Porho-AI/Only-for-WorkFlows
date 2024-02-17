@@ -1,7 +1,7 @@
-name: Testing
+name: Testing  # Name of the GitHub Actions workflow
 
 on:
-  pull_request:
+  pull_request:  # Trigger the workflow on pull requests
     types:
       - opened
       - synchronize
@@ -9,62 +9,61 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Run the job on an Ubuntu environment
     env:
-      API_KEY: ${{ secrets.API_KEY }}
+      API_KEY: ${{ secrets.API_KEY }}  # Set environment variable API_KEY
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository  # Checkout the code repository
+        uses: actions/checkout@v4  # Use the GitHub Actions checkout action
 
-      - name: Print directory contents
-        run: ls -R
+      - name: Print directory contents  # Print the contents of the current directory
+        run: ls -R  # Execute the ls command to list directory contents recursively
 
-      - name: Get changed Python files and function
+      - name: Get changed Python files and function  # Get the changed Python files and functions
         run: | 
-          git fetch origin
-          BASE_BRANCH=$(git rev-parse origin/main)
-          CHANGED_FILES=$(git diff --name-only $BASE_BRANCH HEAD | grep '^tests/.*\.py$' || true)
-          echo "Changed Python Test Files: $CHANGED_FILES"
-          echo 'CHANGED_FILES<<EOF' >> $GITHUB_ENV
-          echo "$CHANGED_FILES" >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          git fetch origin  # Fetch changes from the origin repository
+          BASE_BRANCH=$(git rev-parse origin/main)  # Get the base branch (usually main)
+          CHANGED_FILES=$(git diff --name-only $BASE_BRANCH HEAD | grep '^tests/.*\.py$' || true)  # Get changed Python files in the 'tests' directory
+          echo "Changed Python Test Files: $CHANGED_FILES"  # Print changed Python test files
+          echo 'CHANGED_FILES<<EOF' >> $GITHUB_ENV  # Store changed files in GitHub environment variable
+          echo "$CHANGED_FILES" >> $GITHUB_ENV  # Append changed files to GitHub environment variable
+          echo 'EOF' >> $GITHUB_ENV  # Mark the end of the environment variable
 
           # Extract changed function names
-          CHANGED_FUNCTIONS=$(git diff -U0 $BASE_BRANCH HEAD $CHANGED_FILES | grep -E '^\+' | grep -E 'def ' | sed -E 's/^\+.*def ([a-zA-Z_][a-zA-Z0-9_]*)\(.*/\1/' || true)
-          echo "Changed Functions: $CHANGED_FUNCTIONS"
-          echo 'CHANGED_FUNCTIONS<<EOF' >> $GITHUB_ENV
-          echo "$CHANGED_FUNCTIONS" >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
+          CHANGED_FUNCTIONS=$(git diff -U0 $BASE_BRANCH HEAD $CHANGED_FILES | grep -E '^\+' | grep -E 'def ' | sed -E 's/^\+.*def ([a-zA-Z_][a-zA-Z0-9_]*)\(.*/\1/' || true)  # Extract changed function names
+          echo "Changed Functions: $CHANGED_FUNCTIONS"  # Print changed functions
+          echo 'CHANGED_FUNCTIONS<<EOF' >> $GITHUB_ENV  # Store changed functions in GitHub environment variable
+          echo "$CHANGED_FUNCTIONS" >> $GITHUB_ENV  # Append changed functions to GitHub environment variable
+          echo 'EOF' >> $GITHUB_ENV  # Mark the end of the environment variable
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: Set up Python  # Set up Python environment
+        uses: actions/setup-python@v2  # Use the setup-python action
         with:
-          python-version: "3.10"
+          python-version: "3.10"  # Specify Python version
 
-      - name: Install dependencies
+      - name: Install dependencies  # Install Python dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-        
+          python -m pip install --upgrade pip  # Upgrade pip
+          pip install -r requirements.txt  # Install dependencies from requirements.txt
 
-      - name: Run affected tests
+      - name: Run affected tests  # Run affected tests
         run: |
-          if [ -n "$CHANGED_FILES" ]; then
-            echo "Running affected tests."
-            cd $GITHUB_WORKSPACE
-            # Convert the changed files list to space-separated format
-            CHANGED_FILES_LIST=$(echo "$CHANGED_FILES" | tr '\n' ' ')
+          if [ -n "$CHANGED_FILES" ]; then  # Check if there are changed files
+            echo "Running affected tests."  # Print message
+            cd $GITHUB_WORKSPACE  # Change directory to the GitHub workspace
+            CHANGED_FILES_LIST=$(echo "$CHANGED_FILES" | tr '\n' ' ')  # Convert changed files list to space-separated format
 
             # Run specific functions if available
-            if [ -n "$CHANGED_FUNCTIONS" ]; then
-              echo "Running specific functions: $CHANGED_FUNCTIONS"
-              for func in $CHANGED_FUNCTIONS; do
-                python -m pytest -v -x $CHANGED_FILES_LIST -k "$func"
+            if [ -n "$CHANGED_FUNCTIONS" ]; then  # Check if there are changed functions
+              echo "Running specific functions: $CHANGED_FUNCTIONS"  # Print message
+              for func in $CHANGED_FUNCTIONS; do  # Loop through changed functions
+                python -m pytest -v -x $CHANGED_FILES_LIST -k "$func"  # Run pytest for specific function
               done
             else
-              echo "No specific functions changed. Running all tests in changed files."
-              python -m pytest -v $CHANGED_FILES_LIST
+              echo "No specific functions changed. Running all tests in changed files."  # Print message
+              python -m pytest -v $CHANGED_FILES_LIST  # Run pytest for all changed files
             fi
           else
-            echo "No Python test files changed. Skipping tests."
+            echo "No Python test files changed. Skipping tests."  # Print message
           fi
