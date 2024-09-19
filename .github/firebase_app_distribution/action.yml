@@ -1,0 +1,50 @@
+name: Firebase App Distribution
+description: Install Firebase CLI and upload Apk into Firebase App Distribution
+inputs:
+   version:
+     description: Version for Firebase CLI
+     required: false
+     default: "v1.10.0"
+   machine:
+     description: Running OS (linux or macos)
+     required: false
+     default: "linux"
+   path:
+     description: Path to the .apk
+     required: true
+   app:
+     description: Firebase-App-ID
+     required: true
+   serviceAccountJSON:
+     description: Firebase Token
+     required: true
+   group:
+     description: Tester group
+     required: true
+   releas-note:
+     description: Release Note
+     required: false
+
+runs:
+  using: "composite"
+  steps:
+    # Install firebase-tools to given version and machine. Default version is 9.20.0 and default machine is linux
+    - name: Install firebase-tools Version ${{ inputs.version }} for ${{ inputs.machine }}
+      run: |
+        curl -o "firebase" -L --progress-bar https://firebase.tools/bin/${{ inputs.machine }}/${{ inputs.version }}
+        echo "Setting permissions on binary..."
+        chmod +rx "firebase"
+        echo "Check version"
+        ./firebase --version
+      shell: bash
+
+    # Cloud Login
+    - name: Authenticate to Google Cloud
+      uses: 'google-github-actions/auth@v0'
+      with:
+        credentials_json: '${{ inputs.serviceAccountJSON }}'
+
+    - name: Upload App to Firebase
+      run: |
+        ./firebase appdistribution:distribute "${{ inputs.path }}" --app "${{ inputs.app }}" --groups "${{ inputs.group}}" --release-notes "${{ inputs.releas-note}}"
+      shell: bash

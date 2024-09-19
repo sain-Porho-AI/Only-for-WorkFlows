@@ -1,0 +1,115 @@
+name: Flutter APK Build and Firebase Distribution
+
+on:
+  push:
+    branches:
+      - salman
+  workflow_dispatch:
+
+env:
+  flutterVersion: ${{ vars.FLUTTER_VERSION }}
+  buildNumber: 1
+
+permissions:
+  contents: write  # Necessary for pushing tags in a private repo
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set build number and push new tag
+        run: |
+          git config --global user.email "salmannizamani205@gmail.com"
+          git config --global user.name "salman_18"
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/AIFist/quiz_ai.git
+          
+          # Fetch all tags
+          git fetch --tags
+          
+          # Find the latest tag with the prefix "quiz_ai-build-"
+          LATEST_TAG=$(git tag -l "quiz_ai-build-*" | sort -V | tail -n 1)
+          echo "Latest tag: $LATEST_TAG"
+
+          # Set the build version, start from 0 if no tags found
+          if [ -z "$LATEST_TAG" ]; then
+            BUILD_VERSION=0
+          else
+            BUILD_VERSION=$(echo $LATEST_TAG | sed -E 's/.*build-([0-9]+)$/\1/')
+          fi
+
+          # Increment build version
+          echo "Current build version: $BUILD_VERSION"
+          NEW_BUILD_VERSION=$(($BUILD_VERSION + 1))
+          echo "New build version: $NEW_BUILD_VERSION"
+
+          # Create a new tag
+          NEW_TAG="quiz_ai-build-$NEW_BUILD_VERSION"
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
+
+          # Optionally delete the old tag
+          if [ ! -z "$LATEST_TAG" ]; then
+            git push --delete origin $LATEST_TAG
+          fi
+
+          echo "NEW_BUILD_VERSION=$NEW_BUILD_VERSION" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+
+      - name: Install Flutter ${{ env.flutterVersion }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "${{ env.flutterVersion }}"
+          channel: "stable"
+
+      - name: Check Flutter version
+        run: |
+          flutter --version
+          yes | flutter doctor --android-licenses
+          flutter doctor -v
+
+      - name: Create .env file from secrets
+        run: |
+          echo "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          flutter pub upgrade flutter_secure_storage
+
+      - name: Flutter build apk
+        run: |
+          flutter build apk --release --build-name 1.0.${{ env.NEW_BUILD_VERSION }} --build-number 20 --verbose
+
+      - name: Export build as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: quiz_ai
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Set Google Application Credentials Path
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICE_JSON }}" > ${GITHUB_WORKSPACE}/firebase.json
+          export GOOGLE_APPLICATION_CREDENTIALS=${GITHUB_WORKSPACE}/firebase.json
+          
+      - name: Debug Service Credentials
+        run: |
+          echo "${{ secrets.GOOGLE_SERVICE_JSON }}" | head -c 100  # Only printing the first 100 characters to check
+
+      - name: Upload APK to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.GOOGLE_SERVICE_JSON }}
+          groups: AiFist
+          file: build/app/outputs/flutter-apk/app-release.apk
+          releaseNotes: "New build version ${{ env.NEW_BUILD_VERSION }}"
+        
+
+
+               

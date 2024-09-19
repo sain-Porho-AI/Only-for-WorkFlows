@@ -1,0 +1,32 @@
+name: Versioning with Tags
+description: Counting up the current tag version number and push it to the repository and delete the old tag
+inputs:
+  tag-name-prefix:
+    description: Tag name prefix
+    required: true
+    default: "v"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Init GitHub
+      run: |
+        git config --global user.email "salmannizamani205@gmail.com"
+        git config --global user.name "salman_18"
+        git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/AIFist/quiz_ai.git
+      shell: bash
+
+    - name: Counting up the tag version number
+      run: |
+        GITTAG=$(git tag -l "${{inputs.tag-name-prefix}}-build-*")
+        echo $GITTAG
+        GITTAG_NUMBER=(${GITTAG//${{inputs.tag-name-prefix}}-build-/ })
+        BUILD_VERSION=${GITTAG_NUMBER}
+        echo $BUILD_VERSION
+        NEW_BUILD_VERSION=$(($BUILD_VERSION + 1))
+        echo $NEW_BUILD_VERSION
+        git tag ${{inputs.tag-name-prefix}}-build-$NEW_BUILD_VERSION
+        git push origin ${{inputs.tag-name-prefix}}-build-$NEW_BUILD_VERSION
+        git push --delete origin $GITTAG
+        echo "NEW_BUILD_VERSION=$NEW_BUILD_VERSION" >> $GITHUB_ENV
+      shell: bash

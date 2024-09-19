@@ -14,7 +14,7 @@ jobs:
     steps:
       # Step 1: Checkout Repository
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
       
       # Step 2: Get current branch
       - name: Get current branch
@@ -42,7 +42,7 @@ jobs:
 
       # Step 4: Set up Python
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
